@@ -12,11 +12,58 @@ Shoes.app :title => "Shumblr.", :width => 700, :height => 600 do
   background '#334668'
   background 'img/background.png', :height => 501, :width => 1.0
 
+  @actions = {
+    :text  => { 
+      :fields => {
+        :body   => [:required, :text], 
+        :title  => [:optional, :line]
+      },
+      :method => :regular
+    },
+    :quote => { 
+      :fields => {
+        :text   => [:required, :text], 
+        :source => [:optional, :text]
+      },
+      :method => :quote
+    },
+    :photo => { 
+      :fields => {
+        :source  => [:required, :line], 
+        :caption => [:optional, :text]
+      },
+      :method => :photo,
+    },
+    :video => { 
+      :fields => {
+        :embed   => [:required, :line], 
+        :caption => [:optional, :text]
+      },
+      :method => :video
+    },
+    :link  => { 
+      :fields => {
+        :url         => [:required, :line], 
+        :name        => [:optional, :line], 
+        :description => [:optional, :text]
+      },
+      :method => :link
+    },
+    :chat  => {
+      :fields => {
+        :conversation => [:required, :text],
+        :title        => [:optional, :line]
+      },
+      :method => :conversation
+    }
+  }
+
   def home(&blk)
     @contents.clear do
       para strong("Welcome to Shumblr!\n"),
         "Shumblr is a client for Tumblr.\nYou can post to your Tumblr from ",
-        "here without having to open your browser.\n"
+        "here without having to open your browser.\n\n",
+        em("File uploads are not implemented yet!")
       yield if block_given?
     end
   end
@@ -32,21 +79,18 @@ Shoes.app :title => "Shumblr.", :width => 700, :height => 600 do
       @logged = true
     end
   end
+
   banner "Shumblr.", :font => 'georgia,serif bold', :stroke => '#eee',
       :margin => [10, 5, 10, 5]
 
   
   stack :margin => [5, 0, 5, 5] do
     background rgb(51, 70, 104, 0.5), :curve => 12
-    flow :margin => [80, 10, 90, 10] do
+    flow :margin => [110, 10, 145, 10] do
       background white, :curve => 5
-      image 'img/text.png',  :click => proc { check { new_text  } }
-      image 'img/photo.png', :click => proc { check { } }
-      image 'img/quote.png', :click => proc { check { new_quote } }
-      image 'img/link.png',  :click => proc { check { new_link  } }
-      image 'img/chat.png',  :click => proc { check { } }
-      image 'img/audio.png', :click => proc { check { } }
-      image 'img/video.png', :click => proc { check { } }
+      @actions.each do |action, opts|
+        image "img/#{action}.png", :click => proc { create(action) }
+      end
     end
 
     @contents = stack(:margin => 10)
@@ -54,91 +98,72 @@ Shoes.app :title => "Shumblr.", :width => 700, :height => 600 do
     home
   end
 
-  
-  def new_text
-    @contents.clear do
+  def create(action)
+    unless @logged
+      alert "Please login first!"
+    else
 
-      title "Title ", em("(optional)")
-      @title = edit_line :width => 1.0, :margin => [10, 5, 10, 10]
-
-      title "Text"
-      @text  = edit_box :width => 1.0, :margin => [10, 5, 10, 10]
-
-      @controls = flow do
-        button "Post" do
-          text  = @text.text
-          title = @title.text.empty? ? nil : @title.text
-          if text.empty?
-            alert "No text provided"
+      @contents.clear do
+        @fields = {}
+        @actions[action][:fields].each do |field, params|
+          if params[0] == :required
+            field_text = "#{field.to_s.capitalize}"
           else
-            write_to_api { regular(text, title) }
+            field_text = ["#{field.to_s.capitalize}", em(" (optional)")]
+          end
+          title field_text
+          @fields[field] = case params[1]
+            when :line: edit_line :width => 1.0, :margin => [10, 5, 10, 10]
+            when :text: edit_box  :width => 1.0, :margin => [10, 5, 10, 10]
           end
         end
-        button("Cancel") { home }
+        @controls = flow do
+          button "Post" do
+            valid = true
+            @actions[action][:fields].select {|k,v| 
+              v[0] == :required 
+            }.collect {|f| f[0] }.each do |field|
+              if @fields[field].text.empty?
+                alert "Field #{field.to_s.capitalize} can't be empty"
+                valid = false
+              end
+            end
+
+            @actions[action][:fields].select {|k,v|
+              v[0] == :optional
+            }.collect {|f| f[0] }.each do |field|
+              text = @fields[field].text
+              @fields[field].text = text.empty? ? nil : text
+            end
+
+            if valid
+              write_to_api(@actions[action][:method], @fields)
+            end
+          end
+          button("Cancel") { home }
+        end
       end
     end
   end
 
-  def new_link
-    @contents.clear do
-
-      title "URL"
-      @url = edit_line :width => 1.0, :margin => [10, 5, 10, 10]
-
-      title "Name ", em("(optional)")
-      @name = edit_line :width => 1.0, :margin => [10, 5, 10, 10]
-
-      title "Description ", em("(optional)")
-      @desc = edit_box :width => 1.0, :margin => [10, 5, 10, 10]
-
-      @controls = flow do
-        button "Post" do
-          url  = @url.text
-          name = @name.text.empty? ? nil : @name.text
-          desc = @desc.text.empty?  ? nil : @desc.text
-          if url.empty?
-            alert "No URL provided"
-          else
-            write_to_api { link(url, name, desc) }
-          end
-        end
-        button("Cancel") { home }
-      end
-
-    end
-  end
-
-  def new_quote
-    @contents.clear do
-
-      title "Text"
-      @text = edit_box :width => 1.0, :margin => [10, 5, 10, 10]
-
-      title "Source ", em("(optional)")
-      @source = edit_line :width => 1.0, :margin => [10, 5, 10, 10]
-
-      @controls = flow do
-        button "Post" do
-          text   = @text.text
-          source = @source.text.empty? ? nil : @source.text
-          if text.empty?
-            alert "No text provided"
-          else
-            write_to_api { quote(text, source) }
-          end
-        end
-        button("Cancel") { home }
-      end
-    end
-  end
-
-  def check(&blk)
-    if @logged then yield else alert "Please login first" end
-  end
-
-  def write_to_api(&blk)
+  def write_to_api(method, params)
     begin
-      Tumblr::API.write($mail.text, $pass.text, "Shumblr", &blk)
+      Tumblr::API.write($mail.text, $pass.text, "Shumblr") do
+        case method
+          when :regular
+            regular(params[:body].text, params[:title].text)
+          when :link
+            link(params[:url].text, params[:name].text, params[:description].text)
+          when :conversation
+            conversation(params[:conversation].text, params[:title].text)
+          when :quote
+            quote(params[:text].text, params[:source].text)
+          when :video
+            video(params[:embed].text, params[:caption].text)
+          when :photo
+            photo(params[:source].text, params[:caption].text)
+        end
+      end
       home { para "Content published!", :stroke => green, :font => 'bold' }
     rescue Tumblr::API::AuthError
       alert "Authentication error"
