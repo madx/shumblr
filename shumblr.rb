@@ -69,7 +69,7 @@ Shoes.app :title => "Shumblr.", :width => 700, :height => 600 do
             write_to_api { regular(text, title) }
             @controls.clear do
               para "Text published, ", 
-                link("Return to home", :click => proc { cancel })
+                link("return to home", :click => proc { cancel })
             end
           end
         end
@@ -87,6 +87,6 @@ Shoes.app :title => "Shumblr.", :width => 700, :height => 600 do
   end
 
   def write_to_api(&blk)
-    Tumblr::API.write($mail.text, $pass.text, &blk)
+    Tumblr::API.write($mail.text, $pass.text, "Shumblr", &blk)
   end
 end
