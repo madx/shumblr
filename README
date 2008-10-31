@@ -1,0 +1,30 @@
+h1. Shumblr.
+
+Shumblr is a graphical desktop client for the Tumblr service.
+
+It allows you to post content on your tumblr without having to log on the
+website or even open your browser.
+
+h2. Requirements & install
+
+To run Shumblr, you must have "Shoes":http://shoooes.net/ which is a graphical
+toolkit from the venerable "_why the lucky stiff":http://whytheluckystiff.net
+
+Once you've installed it, run the shumblr.rb file with it.
+
+That's all!
+
+h2. Plans for the future
+
+As of now, Shumblr doesn't support file uploads so you can't post audio items or
+upload photos/videos. For those tasks you still have to log into your account
+from the website. I plan to add thoses features as soon as I can!
+
+You account information IS NOT stored anywhere so you have to enter your email
+and password every time you launch the app. Depending on the feedback, I may
+implement a config file where you put those details so you won't have to login
+anymore.
+
+In future versions, Shumblr will be a full featured Tumblr client with rich text
+editing, post listings, file uploads, and more. Just need to find time to write
+the code :)
